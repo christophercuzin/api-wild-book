@@ -75,17 +75,58 @@ class WildersController {
       if(!skillToAdd) {
         return res.status(404).send("Skill not found")
       }
-      wilder.skills.map((skill) => {
-        if(skill.id === skillToAdd.id) {
-          return res.status(409).send("This skill has already been added to this wilder")
+
+      const existingSKill = ()=> {
+        for (const wilderSkill of wilder.skills) {
+          if(wilderSkill.id == skillToAdd.id) {
+            return wilderSkill
+          }
         }
-      })
+      }
+
+      if(existingSKill()) {
+        return res.status(409).send("This skill has already been added to this wilder")
+      }
       
       wilder.skills = [...wilder.skills, skillToAdd]
       await dataSource.getRepository(WildersEntity).save(wilder);
-      res.send(wilder.skills)
+      res.send("Skill added to wilder")
     } catch (error) {
       res.status(400).send(error)
+    }
+  }
+
+  static async deleteSkill(req, res) {
+    try {
+      // On récupère le wilder à modifier
+      const wilder = await dataSource.getRepository(WildersEntity).findOneBy({
+        id: req.params.wilderId,
+      });
+      if (!wilder) {
+        return res.status(404).send("Wilder not found");
+        
+      }
+      
+      // On récupère la skill à supprimer
+      const skillToRemove = await dataSource
+        .getRepository(SkillsEntity)
+        .findOneBy({ id: req.params.skillId });
+      if (!skillToRemove) {
+        return res.status(404).send("Skill not found");
+      }
+
+      // Oon filtre les skill a persiter
+      wilder.skills = wilder.skills.filter((skill) => {
+        return skill.id !== skillToRemove.id
+      })
+
+      // On sauvegarde le wilder
+      await dataSource.getRepository(WildersEntity).save(wilder);
+
+      // On renvoie une réponse
+      res.send("Skill removed from wilder");
+    } catch {
+      res.status(500).send("error while deleting skill to wilder");
     }
   }
 };
